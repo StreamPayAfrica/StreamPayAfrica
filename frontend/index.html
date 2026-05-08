@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StreamPay Africa</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    header { background: #1e293b; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid #334155; }
+    header h1 { font-size: 1.4rem; color: #38bdf8; }
+    header span { font-size: 0.85rem; color: #94a3b8; }
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; display: grid; gap: 1.5rem; }
+    .card { background: #1e293b; border-radius: 12px; padding: 1.5rem; border: 1px solid #334155; }
+    .card h2 { font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    input, select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.9rem; flex: 1; min-width: 160px; }
+    button { background: #0ea5e9; color: #fff; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+    button:hover { background: #38bdf8; }
+    button.danger { background: #ef4444; }
+    button.danger:hover { background: #f87171; }
+    button.warn { background: #f59e0b; }
+    button.warn:hover { background: #fbbf24; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge.active { background: #064e3b; color: #34d399; }
+    .badge.paused { background: #451a03; color: #fbbf24; }
+    .badge.stopped { background: #1e1b4b; color: #818cf8; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { text-align: left; color: #64748b; padding: 0.4rem 0.5rem; border-bottom: 1px solid #334155; }
+    td { padding: 0.5rem; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+    .mono { font-family: monospace; font-size: 0.8rem; color: #7dd3fc; word-break: break-all; }
+    .msg { padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.85rem; margin-top: 0.75rem; }
+    .msg.ok { background: #064e3b; color: #34d399; }
+    .msg.err { background: #450a0a; color: #fca5a5; }
+    .balance-display { font-size: 2rem; font-weight: 700; color: #38bdf8; margin: 0.5rem 0; }
+    .actions { display: flex; gap: 0.5rem; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🌍 StreamPay Africa</h1>
+  <span>Real-time income streaming on Stellar</span>
+</header>
+
+<div class="container">
+
+  <!-- Wallet Section -->
+  <div class="card">
+    <h2>Wallet</h2>
+    <div class="row">
+      <button onclick="createWallet()">Create New Wallet</button>
+    </div>
+    <div id="walletResult"></div>
+
+    <div style="margin-top:1.5rem">
+      <h2>Check Balance</h2>
+      <div class="row">
+        <input id="balanceKey" placeholder="Public Key (G...)" />
+        <button onclick="checkBalance()">Get Balance</button>
+      </div>
+      <div id="balanceResult"></div>
+    </div>
+
+    <div style="margin-top:1.5rem">
+      <h2>Fund Testnet Wallet</h2>
+      <div class="row">
+        <input id="fundKey" placeholder="Public Key (G...)" />
+        <button onclick="fundWallet()">Fund via Friendbot</button>
+      </div>
+      <div id="fundResult"></div>
+    </div>
+  </div>
+
+  <!-- Create Stream -->
+  <div class="card">
+    <h2>Create Payment Stream</h2>
+    <div class="row">
+      <input id="senderPub" placeholder="Sender Public Key (G...)" />
+      <input id="recipientPub" placeholder="Recipient Public Key (G...)" />
+    </div>
+    <div class="row" style="margin-top:0.75rem">
+      <input id="rate" type="number" step="0.0000001" placeholder="XLM per interval (e.g. 0.1)" />
+      <input id="interval" type="number" placeholder="Interval (ms, e.g. 5000)" value="5000" />
+      <button onclick="createStream()">Create Stream</button>
+    </div>
+    <div id="createResult"></div>
+  </div>
+
+  <!-- Start Stream -->
+  <div class="card">
+    <h2>Start Stream</h2>
+    <div class="row">
+      <input id="startStreamId" placeholder="Stream ID" />
+      <input id="senderSecret" type="password" placeholder="Sender Secret Key (S...)" />
+      <button onclick="startStream()">▶ Start</button>
+    </div>
+    <div id="startResult"></div>
+  </div>
+
+  <!-- Active Streams -->
+  <div class="card">
+    <h2>Streams <button style="float:right;font-size:0.75rem;padding:0.3rem 0.8rem" onclick="loadStreams()">↻ Refresh</button></h2>
+    <div id="streamsTable"><p style="color:#64748b;font-size:0.85rem">Click Refresh to load streams.</p></div>
+  </div>
+
+  <!-- Payment History -->
+  <div class="card">
+    <h2>Payment History</h2>
+    <div class="row">
+      <input id="historyKey" placeholder="Public Key (G...)" />
+      <button onclick="loadPayments()">Load Payments</button>
+    </div>
+    <div id="paymentsTable"></div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'http://localhost:3000/api';
+
+  function msg(id, text, ok = true) {
+    document.getElementById(id).innerHTML = `<div class="msg ${ok ? 'ok' : 'err'}">${text}</div>`;
+  }
+
+  async function api(method, path, body) {
+    const res = await fetch(API + path, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return res.json();
+  }
+
+  async function createWallet() {
+    const data = await api('POST', '/wallet');
+    if (data.error) return msg('walletResult', data.error, false);
+    document.getElementById('walletResult').innerHTML = `
+      <div class="msg ok">
+        <strong>Public Key:</strong><br><span class="mono">${data.publicKey}</span><br><br>
+        <strong>Secret Key (save this!):</strong><br><span class="mono">${data.secretKey}</span>
+      </div>`;
+  }
+
+  async function checkBalance() {
+    const key = document.getElementById('balanceKey').value.trim();
+    if (!key) return msg('balanceResult', 'Enter a public key', false);
+    const data = await api('GET', `/wallet/${key}/balance`);
+    if (data.error) return msg('balanceResult', data.error, false);
+    document.getElementById('balanceResult').innerHTML = `<div class="msg ok"><div class="balance-display">${data.balance} XLM</div></div>`;
+  }
+
+  async function fundWallet() {
+    const key = document.getElementById('fundKey').value.trim();
+    if (!key) return msg('fundResult', 'Enter a public key', false);
+    msg('fundResult', 'Funding via Friendbot...', true);
+    const data = await api('POST', '/wallet/fund', { publicKey: key });
+    if (data.error) return msg('fundResult', data.error, false);
+    msg('fundResult', data.message);
+  }
+
+  async function createStream() {
+    const body = {
+      senderPublicKey: document.getElementById('senderPub').value.trim(),
+      recipientPublicKey: document.getElementById('recipientPub').value.trim(),
+      ratePerInterval: document.getElementById('rate').value,
+      intervalMs: parseInt(document.getElementById('interval').value),
+    };
+    const data = await api('POST', '/streams', body);
+    if (data.error) return msg('createResult', data.error, false);
+    document.getElementById('createResult').innerHTML = `<div class="msg ok">Stream created! ID: <span class="mono">${data.id}</span></div>`;
+  }
+
+  async function startStream() {
+    const id = document.getElementById('startStreamId').value.trim();
+    const secret = document.getElementById('senderSecret').value.trim();
+    if (!id || !secret) return msg('startResult', 'Stream ID and secret key required', false);
+    msg('startResult', 'Starting stream...', true);
+    const data = await api('POST', `/streams/${id}/start`, { senderSecretKey: secret });
+    if (data.error) return msg('startResult', data.error, false);
+    msg('startResult', `Stream is now ${data.status}. Total sent: ${data.totalSent} XLM`);
+    loadStreams();
+  }
+
+  async function controlStream(id, action) {
+    const data = await api('POST', `/streams/${id}/${action}`, {});
+    if (data.error) return alert(data.error);
+    loadStreams();
+  }
+
+  async function loadStreams() {
+    const data = await api('GET', '/streams');
+    if (!Array.isArray(data) || data.length === 0) {
+      document.getElementById('streamsTable').innerHTML = '<p style="color:#64748b;font-size:0.85rem">No streams yet.</p>';
+      return;
+    }
+    const rows = data.map(s => `
+      <tr>
+        <td class="mono">${s.id.slice(0,8)}…</td>
+        <td class="mono">${s.recipientPublicKey.slice(0,12)}…</td>
+        <td>${s.ratePerInterval} XLM / ${s.intervalMs}ms</td>
+        <td>${s.totalSent} XLM</td>
+        <td><span class="badge ${s.status}">${s.status}</span></td>
+        <td class="actions">
+          ${s.status !== 'active' && s.status !== 'stopped' ? `<button onclick="controlStream('${s.id}','start')" style="font-size:0.75rem;padding:0.25rem 0.6rem">▶</button>` : ''}
+          ${s.status === 'active' ? `<button class="warn" onclick="controlStream('${s.id}','pause')" style="font-size:0.75rem;padding:0.25rem 0.6rem">⏸</button>` : ''}
+          ${s.status !== 'stopped' ? `<button class="danger" onclick="controlStream('${s.id}','stop')" style="font-size:0.75rem;padding:0.25rem 0.6rem">■</button>` : ''}
+        </td>
+      </tr>`).join('');
+    document.getElementById('streamsTable').innerHTML = `
+      <table>
+        <thead><tr><th>ID</th><th>Recipient</th><th>Rate</th><th>Total Sent</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  async function loadPayments() {
+    const key = document.getElementById('historyKey').value.trim();
+    if (!key) return;
+    const data = await api('GET', `/webhooks/payments/${key}`);
+    if (data.error) {
+      document.getElementById('paymentsTable').innerHTML = `<div class="msg err">${data.error}</div>`;
+      return;
+    }
+    if (!data.payments.length) {
+      document.getElementById('paymentsTable').innerHTML = '<p style="color:#64748b;font-size:0.85rem;margin-top:0.75rem">No payments found.</p>';
+      return;
+    }
+    const rows = data.payments.map(p => `
+      <tr>
+        <td>${p.type}</td>
+        <td>${p.amount} ${p.asset}</td>
+        <td class="mono">${(p.from || '').slice(0,12)}…</td>
+        <td class="mono">${(p.to || '').slice(0,12)}…</td>
+        <td style="color:#64748b">${new Date(p.createdAt).toLocaleString()}</td>
+      </tr>`).join('');
+    document.getElementById('paymentsTable').innerHTML = `
+      <table style="margin-top:0.75rem">
+        <thead><tr><th>Type</th><th>Amount</th><th>From</th><th>To</th><th>Date</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+</script>
+</body>
+</html>

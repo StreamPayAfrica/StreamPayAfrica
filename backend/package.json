@@ -1,7 +1,20 @@
 {
-  "name": "streampayadfrica-backend",
+  "name": "streampay-africa-backend",
   "version": "1.0.0",
   "description": "Stellar-based real-time income streaming backend for informal workers in Africa",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StreamPayAfrica/StreamPayAfrica.git",
+    "directory": "backend"
+  },
+  "keywords": [
+    "stellar",
+    "payment-streaming",
+    "fintech",
+    "africa",
+    "blockchain"
+  ],
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

@@ -42,7 +42,14 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/streams", streamRoutes);
 app.use("/api/webhooks", webhookRoutes);
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/health", (_req, res) =>
+  res.json({
+    status: "ok",
+    uptimeSeconds: Math.round(process.uptime()),
+    network: process.env.NETWORK === "mainnet" ? "mainnet" : "testnet",
+    timestamp: new Date().toISOString(),
+  })
+);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Not found" });

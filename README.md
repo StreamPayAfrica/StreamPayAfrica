@@ -241,6 +241,7 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | `RATE_LIMIT_MAX` | `60` | Max requests per IP per window across all `/api` routes |
 | `STREAM_STORE` | `memory` | `memory` (lost on restart) or `file` (persisted as JSON on disk) |
 | `STREAM_STORE_PATH` | `./data/streams.json` | Path to the JSON file when `STREAM_STORE=file` |
+| `SHUTDOWN_TIMEOUT_MS` | `10000` | Max time to wait for in-flight requests during shutdown before forcing exit |
 
 ---
 
@@ -283,7 +284,8 @@ Already handled:
   map to correct HTTP status codes
 - **Security headers & rate limiting** — `helmet` and a configurable per-IP rate limiter are on by
   default (see [Environment Variables](#environment-variables))
-- **Graceful shutdown** — `SIGINT`/`SIGTERM` clear in-flight stream timers before the process exits
+- **Graceful shutdown** — `SIGINT`/`SIGTERM` clear in-flight stream timers and let in-flight
+  requests finish, with a forced-exit timeout (`SHUTDOWN_TIMEOUT_MS`) as a safety net
 
 Also handled:
 

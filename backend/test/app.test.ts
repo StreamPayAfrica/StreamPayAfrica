@@ -25,10 +25,12 @@ describe("resolveCorsOrigin", () => {
 });
 
 describe("app", () => {
-  it("GET /health returns ok", async () => {
+  it("GET /health returns ok with uptime and network info", async () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok" });
+    expect(res.body).toMatchObject({ status: "ok", network: "testnet" });
+    expect(typeof res.body.uptimeSeconds).toBe("number");
+    expect(typeof res.body.timestamp).toBe("string");
   });
 
   it("returns a JSON 404 for unknown routes", async () => {

@@ -31,9 +31,14 @@ StreamPayAfrica/
 │   │   │   ├── streams.ts    # Stream CRUD + controls
 │   │   │   └── webhooks.ts   # Payment history
 │   │   ├── services/
-│   │   │   ├── walletService.ts   # Stellar keypair + Friendbot + balance
-│   │   │   └── streamService.ts  # Stream state machine + Stellar payments
-│   │   └── utils/errors.ts   # Typed ValidationError/NotFoundError + status mapping
+│   │   │   ├── walletService.ts    # Stellar keypair + Friendbot + balance
+│   │   │   ├── streamService.ts    # Stream state machine + Stellar payments
+│   │   │   ├── streamStore.ts      # StreamStore interface + in-memory implementation
+│   │   │   └── fileStreamStore.ts  # Optional disk-backed StreamStore (STREAM_STORE=file)
+│   │   └── utils/
+│   │       ├── errors.ts         # Typed ValidationError/NotFoundError + status mapping
+│   │       ├── asyncHandler.ts   # Forwards async route rejections to the error middleware
+│   │       └── requireFields.ts  # Middleware asserting required request body fields
 │   ├── test/                 # Jest + Supertest test suite
 │   ├── .env.example
 │   ├── eslint.config.js
@@ -233,6 +238,8 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | `CORS_ORIGIN` | `*` | Allowed CORS origin(s); a single origin or a comma-separated list, set to your frontend's origin(s) in production |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window, in milliseconds |
 | `RATE_LIMIT_MAX` | `60` | Max requests per IP per window across all `/api` routes |
+| `STREAM_STORE` | `memory` | `memory` (lost on restart) or `file` (persisted as JSON on disk) |
+| `STREAM_STORE_PATH` | `./data/streams.json` | Path to the JSON file when `STREAM_STORE=file` |
 
 ---
 
@@ -277,9 +284,17 @@ Already handled:
   default (see [Environment Variables](#environment-variables))
 - **Graceful shutdown** — `SIGINT`/`SIGTERM` clear in-flight stream timers before the process exits
 
+Also handled:
+
+- **Stream persistence** — set `STREAM_STORE=file` to persist stream metadata to disk across
+  restarts (see [Environment Variables](#environment-variables)); streams that were `active` reload
+  as `paused` since secret keys are never stored, so they must be explicitly restarted
+
 Still open — these are demo simplifications that need real infrastructure before production use:
 
-- **Persist stream state** — replace the in-memory `Map` in `streamService.ts` with PostgreSQL or Redis
+- **Durable storage at scale** — the `file` store is fine for a single instance; a real deployment
+  should replace `FileStreamStore` (see `backend/src/services/streamStore.ts`) with a PostgreSQL- or
+  Redis-backed implementation
 - **Secret key handling** — never send secret keys over the wire in production; use a signing service or hardware wallet
 - **HTTPS** — terminate TLS at a reverse proxy (nginx, Caddy) in front of the Node server
 - **Mainnet** — set `NETWORK=mainnet` and update `HORIZON_URL` to `https://horizon.stellar.org`

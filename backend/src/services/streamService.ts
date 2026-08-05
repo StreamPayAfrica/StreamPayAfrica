@@ -8,13 +8,21 @@ import {
 } from "./walletService";
 import { NotFoundError, ValidationError } from "../utils/errors";
 import { MemoryStreamStore, Stream, StreamStore } from "./streamStore";
+import { FileStreamStore } from "./fileStreamStore";
 
 export type { Stream, StreamStatus } from "./streamStore";
 
 /** Minimum interval to avoid hammering Horizon / burning fees on tiny streams. */
 const MIN_INTERVAL_MS = 1000;
 
-const store: StreamStore = new MemoryStreamStore();
+function createStore(): StreamStore {
+  if (process.env.STREAM_STORE === "file") {
+    return new FileStreamStore(process.env.STREAM_STORE_PATH || "./data/streams.json");
+  }
+  return new MemoryStreamStore();
+}
+
+const store: StreamStore = createStore();
 const timers = new Map<string, NodeJS.Timeout>();
 const ticking = new Set<string>();
 

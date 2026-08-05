@@ -15,10 +15,17 @@ const router = Router();
 router.post("/", (req: Request, res: Response) => {
   const { senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs } = req.body;
   if (!senderPublicKey || !recipientPublicKey || !ratePerInterval || !intervalMs) {
-    return res.status(400).json({ error: "senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs required" });
+    return res
+      .status(400)
+      .json({ error: "senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs required" });
   }
   try {
-    const stream = createStream(senderPublicKey, recipientPublicKey, String(ratePerInterval), Number(intervalMs));
+    const stream = createStream(
+      senderPublicKey,
+      recipientPublicKey,
+      String(ratePerInterval),
+      Number(intervalMs)
+    );
     res.status(201).json(stream);
   } catch (err: any) {
     res.status(statusCodeFor(err)).json({ error: err.message });

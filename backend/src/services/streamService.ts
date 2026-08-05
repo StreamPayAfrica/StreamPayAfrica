@@ -1,9 +1,4 @@
-import {
-  Asset,
-  Keypair,
-  Operation,
-  TransactionBuilder,
-} from "@stellar/stellar-sdk";
+import { Asset, Keypair, Operation, TransactionBuilder } from "@stellar/stellar-sdk";
 import { randomUUID } from "crypto";
 import {
   assertValidPublicKey,
@@ -73,10 +68,7 @@ export function createStream(
   return stream;
 }
 
-export async function startStream(
-  streamId: string,
-  senderSecretKey: string
-): Promise<Stream> {
+export async function startStream(streamId: string, senderSecretKey: string): Promise<Stream> {
   const stream = getStreamOrThrow(streamId);
   if (stream.status === "active") return stream;
   if (stream.status === "stopped") {
@@ -140,9 +132,7 @@ export function getStream(streamId: string): Stream | undefined {
 export function listStreams(publicKey?: string): Stream[] {
   const all = Array.from(streams.values());
   if (!publicKey) return all;
-  return all.filter(
-    (s) => s.senderPublicKey === publicKey || s.recipientPublicKey === publicKey
-  );
+  return all.filter((s) => s.senderPublicKey === publicKey || s.recipientPublicKey === publicKey);
 }
 
 /** Stop all running interval timers, e.g. during graceful shutdown. */

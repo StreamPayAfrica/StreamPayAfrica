@@ -2,9 +2,8 @@ import { Horizon, Keypair, NetworkError, Networks, StrKey } from "@stellar/stell
 import { NotFoundError, ValidationError } from "../utils/errors";
 
 const HORIZON_URL = process.env.HORIZON_URL || "https://horizon-testnet.stellar.org";
-export const NETWORK_PASSPHRASE = process.env.NETWORK === "mainnet"
-  ? Networks.PUBLIC
-  : Networks.TESTNET;
+export const NETWORK_PASSPHRASE =
+  process.env.NETWORK === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
 const IS_MAINNET = process.env.NETWORK === "mainnet";
 
 export const server = new Horizon.Server(HORIZON_URL);
@@ -41,9 +40,7 @@ export async function fundWallet(publicKey: string): Promise<void> {
   if (IS_MAINNET) {
     throw new ValidationError("Friendbot funding is only available on testnet");
   }
-  const res = await fetch(
-    `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`
-  );
+  const res = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`);
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Friendbot failed: ${body}`);

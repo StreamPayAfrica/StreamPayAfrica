@@ -30,39 +30,37 @@ describe("streamService", () => {
     });
 
     it("rejects an invalid sender public key", () => {
-      expect(() => createStream("bad", recipient.publicKey, "0.1", 5000)).toThrow(
-        ValidationError
-      );
+      expect(() => createStream("bad", recipient.publicKey, "0.1", 5000)).toThrow(ValidationError);
     });
 
     it("rejects sender === recipient", () => {
-      expect(() =>
-        createStream(sender.publicKey, sender.publicKey, "0.1", 5000)
-      ).toThrow(/must differ/);
+      expect(() => createStream(sender.publicKey, sender.publicKey, "0.1", 5000)).toThrow(
+        /must differ/
+      );
     });
 
     it("rejects a non-positive rate", () => {
-      expect(() =>
-        createStream(sender.publicKey, recipient.publicKey, "0", 5000)
-      ).toThrow(/positive number/);
-      expect(() =>
-        createStream(sender.publicKey, recipient.publicKey, "-1", 5000)
-      ).toThrow(/positive number/);
+      expect(() => createStream(sender.publicKey, recipient.publicKey, "0", 5000)).toThrow(
+        /positive number/
+      );
+      expect(() => createStream(sender.publicKey, recipient.publicKey, "-1", 5000)).toThrow(
+        /positive number/
+      );
       expect(() =>
         createStream(sender.publicKey, recipient.publicKey, "not-a-number", 5000)
       ).toThrow(/positive number/);
     });
 
     it("rejects an interval below the minimum", () => {
-      expect(() =>
-        createStream(sender.publicKey, recipient.publicKey, "0.1", 999)
-      ).toThrow(/intervalMs/);
+      expect(() => createStream(sender.publicKey, recipient.publicKey, "0.1", 999)).toThrow(
+        /intervalMs/
+      );
     });
 
     it("rejects a non-integer interval", () => {
-      expect(() =>
-        createStream(sender.publicKey, recipient.publicKey, "0.1", 1000.5)
-      ).toThrow(/intervalMs/);
+      expect(() => createStream(sender.publicKey, recipient.publicKey, "0.1", 1000.5)).toThrow(
+        /intervalMs/
+      );
     });
   });
 
@@ -70,16 +68,12 @@ describe("streamService", () => {
     it("throws NotFoundError for an unknown stream id", async () => {
       expect(() => pauseStream("does-not-exist")).toThrow(NotFoundError);
       expect(() => stopStream("does-not-exist")).toThrow(NotFoundError);
-      await expect(startStream("does-not-exist", sender.secretKey)).rejects.toThrow(
-        NotFoundError
-      );
+      await expect(startStream("does-not-exist", sender.secretKey)).rejects.toThrow(NotFoundError);
     });
 
     it("rejects starting with a secret key that doesn't match the sender", async () => {
       const stream = createStream(sender.publicKey, recipient.publicKey, "0.1", 5000);
-      await expect(startStream(stream.id, recipient.secretKey)).rejects.toThrow(
-        /does not match/
-      );
+      await expect(startStream(stream.id, recipient.secretKey)).rejects.toThrow(/does not match/);
     });
 
     it("starts a stream, sends the first payment immediately, and updates totals", async () => {

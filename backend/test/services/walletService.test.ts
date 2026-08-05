@@ -53,14 +53,10 @@ describe("walletService", () => {
 
     it("calls Friendbot and resolves on success", async () => {
       const { publicKey } = walletService.createWallet();
-      const fetchSpy = jest
-        .spyOn(global, "fetch")
-        .mockResolvedValue({ ok: true } as Response);
+      const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({ ok: true } as Response);
 
       await expect(walletService.fundWallet(publicKey)).resolves.toBeUndefined();
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining(encodeURIComponent(publicKey))
-      );
+      expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining(encodeURIComponent(publicKey)));
     });
 
     it("throws when Friendbot responds with an error", async () => {

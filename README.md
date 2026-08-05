@@ -51,7 +51,9 @@ StreamPayAfrica/
     └── index.html            # Single-page dashboard
 ```
 
-The backend uses an **in-memory store** for stream state (suitable for demos and development). For production, replace the `Map` in `streamService.ts` with a database.
+The backend stores stream state behind a `StreamStore` interface (`streamStore.ts`). It defaults to
+an in-memory `Map`, suitable for demos and development; set `STREAM_STORE=file` to persist to disk
+instead (see [Environment Variables](#environment-variables)).
 
 ---
 
@@ -289,6 +291,7 @@ runs lint, build, and test on Node 18.x and 20.x for every push and pull request
 | Security | `helmet`, `express-rate-limit`, configurable CORS |
 | Testing | Jest, Supertest |
 | Linting | ESLint (typescript-eslint), Prettier |
+| Deployment | Docker (multi-stage build), docker-compose |
 | Frontend | Vanilla HTML/CSS/JS (API base URL configurable in the UI) |
 
 ---
@@ -303,12 +306,12 @@ Already handled:
   default (see [Environment Variables](#environment-variables))
 - **Graceful shutdown** — `SIGINT`/`SIGTERM` clear in-flight stream timers and let in-flight
   requests finish, with a forced-exit timeout (`SHUTDOWN_TIMEOUT_MS`) as a safety net
-
-Also handled:
-
+- **Structured logging** — leveled, JSON-formatted logs via `LOG_LEVEL` instead of bare `console.*`
 - **Stream persistence** — set `STREAM_STORE=file` to persist stream metadata to disk across
   restarts (see [Environment Variables](#environment-variables)); streams that were `active` reload
   as `paused` since secret keys are never stored, so they must be explicitly restarted
+- **Containerized deployment** — a multi-stage `Dockerfile` and `docker-compose.yml` for running the
+  backend with a persistent volume (see [Running with Docker](#running-with-docker))
 
 Still open — these are demo simplifications that need real infrastructure before production use:
 

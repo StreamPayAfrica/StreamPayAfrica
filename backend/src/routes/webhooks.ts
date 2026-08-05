@@ -1,13 +1,15 @@
 import { Router, Request, Response } from "express";
 import { NetworkError } from "@stellar/stellar-sdk";
 import { assertValidPublicKey, server } from "../services/walletService";
-import { NotFoundError, statusCodeFor } from "../utils/errors";
+import { NotFoundError } from "../utils/errors";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
 // GET /api/webhooks/payments/:publicKey - recent payments for an account
-router.get("/payments/:publicKey", async (req: Request, res: Response) => {
-  try {
+router.get(
+  "/payments/:publicKey",
+  asyncHandler(async (req: Request, res: Response) => {
     assertValidPublicKey(req.params.publicKey);
     const payments = await server
       .payments()
@@ -33,9 +35,7 @@ router.get("/payments/:publicKey", async (req: Request, res: Response) => {
     }));
 
     res.json({ publicKey: req.params.publicKey, payments: records });
-  } catch (err: any) {
-    res.status(statusCodeFor(err)).json({ error: err.message });
-  }
-});
+  })
+);
 
 export default router;

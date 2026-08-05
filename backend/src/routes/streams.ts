@@ -7,7 +7,7 @@ import {
   getStream,
   listStreams,
 } from "../services/streamService";
-import { statusCodeFor } from "../utils/errors";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
@@ -19,17 +19,13 @@ router.post("/", (req: Request, res: Response) => {
       .status(400)
       .json({ error: "senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs required" });
   }
-  try {
-    const stream = createStream(
-      senderPublicKey,
-      recipientPublicKey,
-      String(ratePerInterval),
-      Number(intervalMs)
-    );
-    res.status(201).json(stream);
-  } catch (err: any) {
-    res.status(statusCodeFor(err)).json({ error: err.message });
-  }
+  const stream = createStream(
+    senderPublicKey,
+    recipientPublicKey,
+    String(ratePerInterval),
+    Number(intervalMs)
+  );
+  res.status(201).json(stream);
 });
 
 // GET /api/streams - list all streams (optionally filter by ?publicKey=)
@@ -46,33 +42,24 @@ router.get("/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/streams/:id/start
-router.post("/:id/start", async (req: Request, res: Response) => {
-  const { senderSecretKey } = req.body;
-  if (!senderSecretKey) return res.status(400).json({ error: "senderSecretKey required" });
-  try {
+router.post(
+  "/:id/start",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { senderSecretKey } = req.body;
+    if (!senderSecretKey) return res.status(400).json({ error: "senderSecretKey required" });
     const stream = await startStream(req.params.id, senderSecretKey);
     res.json(stream);
-  } catch (err: any) {
-    res.status(statusCodeFor(err)).json({ error: err.message });
-  }
-});
+  })
+);
 
 // POST /api/streams/:id/pause
 router.post("/:id/pause", (req: Request, res: Response) => {
-  try {
-    res.json(pauseStream(req.params.id));
-  } catch (err: any) {
-    res.status(statusCodeFor(err)).json({ error: err.message });
-  }
+  res.json(pauseStream(req.params.id));
 });
 
 // POST /api/streams/:id/stop
 router.post("/:id/stop", (req: Request, res: Response) => {
-  try {
-    res.json(stopStream(req.params.id));
-  } catch (err: any) {
-    res.status(statusCodeFor(err)).json({ error: err.message });
-  }
+  res.json(stopStream(req.params.id));
 });
 
 export default router;

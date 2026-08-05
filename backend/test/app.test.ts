@@ -1,5 +1,28 @@
 import request from "supertest";
-import app from "../src/app";
+import app, { resolveCorsOrigin } from "../src/app";
+
+describe("resolveCorsOrigin", () => {
+  const original = process.env.CORS_ORIGIN;
+
+  afterEach(() => {
+    process.env.CORS_ORIGIN = original;
+  });
+
+  it("defaults to * when unset", () => {
+    delete process.env.CORS_ORIGIN;
+    expect(resolveCorsOrigin()).toBe("*");
+  });
+
+  it("returns a single string for one origin", () => {
+    process.env.CORS_ORIGIN = "https://app.example.com";
+    expect(resolveCorsOrigin()).toBe("https://app.example.com");
+  });
+
+  it("splits a comma-separated list into an array", () => {
+    process.env.CORS_ORIGIN = "https://a.example.com, https://b.example.com";
+    expect(resolveCorsOrigin()).toEqual(["https://a.example.com", "https://b.example.com"]);
+  });
+});
 
 describe("app", () => {
   it("GET /health returns ok", async () => {

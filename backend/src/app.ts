@@ -7,7 +7,18 @@ import streamRoutes from "./routes/streams";
 import webhookRoutes from "./routes/webhooks";
 import { statusCodeFor } from "./utils/errors";
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+/** Accepts "*", a single origin, or a comma-separated list of allowed origins. */
+export function resolveCorsOrigin(): string | string[] {
+  const raw = process.env.CORS_ORIGIN || "*";
+  if (raw === "*") return raw;
+  const origins = raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return origins.length <= 1 ? (origins[0] ?? "*") : origins;
+}
+
+const CORS_ORIGIN = resolveCorsOrigin();
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 60;
 

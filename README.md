@@ -22,7 +22,9 @@ StreamPay Africa lets employers or clients stream XLM payments continuously to w
 ```
 StreamPayAfrica/
 ├── .github/workflows/ci.yml  # Lint + build + test on push/PR
+├── docker-compose.yml        # Runs the backend + persistent volume via Docker
 ├── backend/                  # Node.js + TypeScript API
+│   ├── Dockerfile            # Multi-stage build: compile, then ship prod deps only
 │   ├── src/
 │   │   ├── app.ts            # Express app: middleware, routes, error handling
 │   │   ├── index.ts          # Process entry point: starts app.ts, graceful shutdown
@@ -37,6 +39,7 @@ StreamPayAfrica/
 │   │   │   └── fileStreamStore.ts  # Optional disk-backed StreamStore (STREAM_STORE=file)
 │   │   └── utils/
 │   │       ├── errors.ts         # Typed ValidationError/NotFoundError + status mapping
+│   │       ├── logger.ts         # Leveled, structured logging (LOG_LEVEL)
 │   │       ├── asyncHandler.ts   # Forwards async route rejections to the error middleware
 │   │       └── requireFields.ts  # Middleware asserting required request body fields
 │   ├── test/                 # Jest + Supertest test suite
@@ -242,6 +245,20 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | `STREAM_STORE` | `memory` | `memory` (lost on restart) or `file` (persisted as JSON on disk) |
 | `STREAM_STORE_PATH` | `./data/streams.json` | Path to the JSON file when `STREAM_STORE=file` |
 | `SHUTDOWN_TIMEOUT_MS` | `10000` | Max time to wait for in-flight requests during shutdown before forcing exit |
+
+---
+
+## Running with Docker
+
+```bash
+docker compose up --build
+```
+
+This builds the backend from `backend/Dockerfile` (multi-stage: compiles TypeScript, then ships
+only production dependencies + compiled output), runs it on `http://localhost:3000`, and persists
+stream data in a named volume via `STREAM_STORE=file`. Override any environment variable in
+`docker-compose.yml` (e.g. `NETWORK`, `CORS_ORIGIN`) to point at a different Stellar network or
+frontend origin.
 
 ---
 

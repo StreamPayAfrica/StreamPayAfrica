@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      NETWORK: testnet
+      CORS_ORIGIN: "*"
+      STREAM_STORE: file
+      STREAM_STORE_PATH: /app/data/streams.json
+    volumes:
+      - stream-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  stream-data:

@@ -7,28 +7,14 @@ import {
   NETWORK_PASSPHRASE,
 } from "./walletService";
 import { NotFoundError, ValidationError } from "../utils/errors";
+import { MemoryStreamStore, Stream, StreamStore } from "./streamStore";
+
+export type { Stream, StreamStatus } from "./streamStore";
 
 /** Minimum interval to avoid hammering Horizon / burning fees on tiny streams. */
 const MIN_INTERVAL_MS = 1000;
 
-export type StreamStatus = "active" | "paused" | "stopped";
-
-export interface Stream {
-  id: string;
-  senderPublicKey: string;
-  recipientPublicKey: string;
-  /** XLM per interval */
-  ratePerInterval: string;
-  /** Interval in milliseconds */
-  intervalMs: number;
-  status: StreamStatus;
-  totalSent: string;
-  createdAt: string;
-  lastPaymentAt: string | null;
-}
-
-// In-memory store (replace with DB in production)
-const streams = new Map<string, Stream>();
+const store: StreamStore = new MemoryStreamStore();
 const timers = new Map<string, NodeJS.Timeout>();
 const ticking = new Set<string>();
 
@@ -64,7 +50,7 @@ export function createStream(
     createdAt: new Date().toISOString(),
     lastPaymentAt: null,
   };
-  streams.set(stream.id, stream);
+  store.set(stream);
   return stream;
 }
 
@@ -82,6 +68,7 @@ export async function startStream(streamId: string, senderSecretKey: string): Pr
   }
 
   stream.status = "active";
+  store.set(stream);
 
   const tick = async () => {
     if (stream.status !== "active" || ticking.has(streamId)) return;
@@ -97,6 +84,7 @@ export async function startStream(streamId: string, senderSecretKey: string): Pr
       stream.status = "paused";
       clearTimer(streamId);
     } finally {
+      store.set(stream);
       ticking.delete(streamId);
     }
   };
@@ -114,6 +102,7 @@ export async function startStream(streamId: string, senderSecretKey: string): Pr
 export function pauseStream(streamId: string): Stream {
   const stream = getStreamOrThrow(streamId);
   stream.status = "paused";
+  store.set(stream);
   clearTimer(streamId);
   return stream;
 }
@@ -121,16 +110,17 @@ export function pauseStream(streamId: string): Stream {
 export function stopStream(streamId: string): Stream {
   const stream = getStreamOrThrow(streamId);
   stream.status = "stopped";
+  store.set(stream);
   clearTimer(streamId);
   return stream;
 }
 
 export function getStream(streamId: string): Stream | undefined {
-  return streams.get(streamId);
+  return store.get(streamId);
 }
 
 export function listStreams(publicKey?: string): Stream[] {
-  const all = Array.from(streams.values());
+  const all = store.all();
   if (!publicKey) return all;
   return all.filter((s) => s.senderPublicKey === publicKey || s.recipientPublicKey === publicKey);
 }
@@ -145,7 +135,7 @@ export function clearAllTimers(): void {
 // --- helpers ---
 
 function getStreamOrThrow(streamId: string): Stream {
-  const stream = streams.get(streamId);
+  const stream = store.get(streamId);
   if (!stream) throw new NotFoundError(`Stream not found: ${streamId}`);
   return stream;
 }

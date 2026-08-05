@@ -21,17 +21,22 @@ StreamPay Africa lets employers or clients stream XLM payments continuously to w
 
 ```
 StreamPayAfrica/
+├── .github/workflows/ci.yml  # Lint + build + test on push/PR
 ├── backend/                  # Node.js + TypeScript API
 │   ├── src/
-│   │   ├── index.ts          # Express app entry point
+│   │   ├── app.ts            # Express app: middleware, routes, error handling
+│   │   ├── index.ts          # Process entry point: starts app.ts, graceful shutdown
 │   │   ├── routes/
 │   │   │   ├── wallet.ts     # Wallet endpoints
 │   │   │   ├── streams.ts    # Stream CRUD + controls
 │   │   │   └── webhooks.ts   # Payment history
-│   │   └── services/
-│   │       ├── walletService.ts   # Stellar keypair + Friendbot + balance
-│   │       └── streamService.ts  # Stream state machine + Stellar payments
+│   │   ├── services/
+│   │   │   ├── walletService.ts   # Stellar keypair + Friendbot + balance
+│   │   │   └── streamService.ts  # Stream state machine + Stellar payments
+│   │   └── utils/errors.ts   # Typed ValidationError/NotFoundError + status mapping
+│   ├── test/                 # Jest + Supertest test suite
 │   ├── .env.example
+│   ├── eslint.config.js
 │   ├── package.json
 │   └── tsconfig.json
 └── frontend/
@@ -80,7 +85,9 @@ The API listens on `http://localhost:3000` by default.
 
 ### 4. Open the dashboard
 
-Open `frontend/index.html` directly in your browser. No build step required.
+Open `frontend/index.html` directly in your browser. No build step required. It defaults to
+`http://localhost:3000/api`; use the "API Server" field at the top to point it at a different
+backend (saved in `localStorage`).
 
 ---
 
@@ -137,6 +144,11 @@ Base URL: `http://localhost:3000/api`
 }
 ```
 
+Validation: `senderPublicKey`/`recipientPublicKey` must be valid Stellar public keys and must differ,
+`ratePerInterval` must be a positive number, and `intervalMs` must be an integer of at least 1000
+(1 second). `POST /streams/:id/start` also verifies that `senderSecretKey` decodes to the stream's
+`senderPublicKey` before starting.
+
 **POST /streams/:id/start** — body:
 ```json
 { "senderSecretKey": "S..." }
@@ -157,7 +169,9 @@ Stream object:
 }
 ```
 
-Stream statuses: `paused` → `active` → `paused` / `stopped`
+Stream statuses: created `paused`, toggles freely between `paused` ⇄ `active`, and `stopped` is a
+terminal state — a stopped stream cannot be restarted. If a payment fails (e.g. the recipient
+account doesn't exist on-chain), the stream automatically moves to `paused`.
 
 ---
 
@@ -216,6 +230,26 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | `PORT` | `3000` | API server port |
 | `NETWORK` | `testnet` | `testnet` or `mainnet` |
 | `HORIZON_URL` | Testnet Horizon | Custom Horizon endpoint |
+| `CORS_ORIGIN` | `*` | Allowed CORS origin; set to your frontend's origin in production |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window, in milliseconds |
+| `RATE_LIMIT_MAX` | `60` | Max requests per IP per window across all `/api` routes |
+
+---
+
+## Development
+
+From `backend/`:
+
+```bash
+npm test        # run the Jest test suite
+npm run lint     # check formatting and lint rules
+npm run lint:fix # auto-fix formatting and lint issues
+```
+
+Service-layer tests mock only the Stellar network boundary (`server.loadAccount`,
+`submitTransaction`, `payments`), so they run offline. Route tests mock the service layer to
+exercise request validation and HTTP status codes in isolation. CI (`.github/workflows/ci.yml`)
+runs lint, build, and test on Node 18.x and 20.x for every push and pull request to `main`.
 
 ---
 
@@ -226,15 +260,27 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | Blockchain | [Stellar](https://stellar.org) (XLM, Horizon API) |
 | Backend | Node.js, TypeScript, Express |
 | Stellar SDK | `@stellar/stellar-sdk` v12 |
-| Frontend | Vanilla HTML/CSS/JS |
+| Security | `helmet`, `express-rate-limit`, configurable CORS |
+| Testing | Jest, Supertest |
+| Linting | ESLint (typescript-eslint), Prettier |
+| Frontend | Vanilla HTML/CSS/JS (API base URL configurable in the UI) |
 
 ---
 
 ## Production Considerations
 
+Already handled:
+
+- **Input validation** — Stellar keys, rates, and intervals are validated before use; typed errors
+  map to correct HTTP status codes
+- **Security headers & rate limiting** — `helmet` and a configurable per-IP rate limiter are on by
+  default (see [Environment Variables](#environment-variables))
+- **Graceful shutdown** — `SIGINT`/`SIGTERM` clear in-flight stream timers before the process exits
+
+Still open — these are demo simplifications that need real infrastructure before production use:
+
 - **Persist stream state** — replace the in-memory `Map` in `streamService.ts` with PostgreSQL or Redis
 - **Secret key handling** — never send secret keys over the wire in production; use a signing service or hardware wallet
-- **Rate limiting** — add rate limiting to the API (e.g., `express-rate-limit`)
 - **HTTPS** — terminate TLS at a reverse proxy (nginx, Caddy) in front of the Node server
 - **Mainnet** — set `NETWORK=mainnet` and update `HORIZON_URL` to `https://horizon.stellar.org`
 

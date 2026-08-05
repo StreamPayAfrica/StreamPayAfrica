@@ -8,25 +8,25 @@ import {
   listStreams,
 } from "../services/streamService";
 import { asyncHandler } from "../utils/asyncHandler";
+import { requireFields } from "../utils/requireFields";
 
 const router = Router();
 
 // POST /api/streams - create a stream
-router.post("/", (req: Request, res: Response) => {
-  const { senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs } = req.body;
-  if (!senderPublicKey || !recipientPublicKey || !ratePerInterval || !intervalMs) {
-    return res
-      .status(400)
-      .json({ error: "senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs required" });
+router.post(
+  "/",
+  requireFields("senderPublicKey", "recipientPublicKey", "ratePerInterval", "intervalMs"),
+  (req: Request, res: Response) => {
+    const { senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs } = req.body;
+    const stream = createStream(
+      senderPublicKey,
+      recipientPublicKey,
+      String(ratePerInterval),
+      Number(intervalMs)
+    );
+    res.status(201).json(stream);
   }
-  const stream = createStream(
-    senderPublicKey,
-    recipientPublicKey,
-    String(ratePerInterval),
-    Number(intervalMs)
-  );
-  res.status(201).json(stream);
-});
+);
 
 // GET /api/streams - list all streams (optionally filter by ?publicKey=)
 router.get("/", (req: Request, res: Response) => {
@@ -44,9 +44,9 @@ router.get("/:id", (req: Request, res: Response) => {
 // POST /api/streams/:id/start
 router.post(
   "/:id/start",
+  requireFields("senderSecretKey"),
   asyncHandler(async (req: Request, res: Response) => {
     const { senderSecretKey } = req.body;
-    if (!senderSecretKey) return res.status(400).json({ error: "senderSecretKey required" });
     const stream = await startStream(req.params.id, senderSecretKey);
     res.json(stream);
   })

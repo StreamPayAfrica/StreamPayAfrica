@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { createWallet, fundWallet, getBalance } from "../services/walletService";
 import { asyncHandler } from "../utils/asyncHandler";
+import { requireFields } from "../utils/requireFields";
 
 const router = Router();
 
@@ -12,9 +13,9 @@ router.post("/", (_req: Request, res: Response) => {
 // POST /api/wallet/fund - fund a testnet wallet via Friendbot
 router.post(
   "/fund",
+  requireFields("publicKey"),
   asyncHandler(async (req: Request, res: Response) => {
     const { publicKey } = req.body;
-    if (!publicKey) return res.status(400).json({ error: "publicKey required" });
     await fundWallet(publicKey);
     res.json({ message: "Wallet funded successfully", publicKey });
   })

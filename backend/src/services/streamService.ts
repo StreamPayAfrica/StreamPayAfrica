@@ -7,6 +7,7 @@ import {
   NETWORK_PASSPHRASE,
 } from "./walletService";
 import { NotFoundError, ValidationError } from "../utils/errors";
+import { logger } from "../utils/logger";
 import { MemoryStreamStore, Stream, StreamStore } from "./streamStore";
 import { FileStreamStore } from "./fileStreamStore";
 
@@ -88,7 +89,10 @@ export async function startStream(streamId: string, senderSecretKey: string): Pr
       ).toFixed(7);
       stream.lastPaymentAt = new Date().toISOString();
     } catch (err) {
-      console.error(`Stream ${streamId} payment failed:`, err);
+      logger.error("Stream payment failed", {
+        streamId,
+        message: err instanceof Error ? err.message : String(err),
+      });
       stream.status = "paused";
       clearTimer(streamId);
     } finally {

@@ -233,6 +233,7 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3000` | API server port |
+| `LOG_LEVEL` | `info` | Minimum level logged: `debug`, `info`, `warn`, or `error` |
 | `NETWORK` | `testnet` | `testnet` or `mainnet` |
 | `HORIZON_URL` | Testnet Horizon | Custom Horizon endpoint |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin(s); a single origin or a comma-separated list, set to your frontend's origin(s) in production |

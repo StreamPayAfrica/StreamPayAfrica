@@ -6,6 +6,7 @@ import walletRoutes from "./routes/wallet";
 import streamRoutes from "./routes/streams";
 import webhookRoutes from "./routes/webhooks";
 import { statusCodeFor } from "./utils/errors";
+import { logger } from "./utils/logger";
 
 /** Accepts "*", a single origin, or a comma-separated list of allowed origins. */
 export function resolveCorsOrigin(): string | string[] {
@@ -54,7 +55,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   if (err.type === "entity.too.large") {
     return res.status(413).json({ error: "Request body too large" });
   }
-  console.error("Unhandled error:", err);
+  logger.error("Unhandled error", { message: err?.message, stack: err?.stack });
   res.status(statusCodeFor(err)).json({ error: err.message || "Internal server error" });
 });
 

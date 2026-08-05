@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname } from "path";
+import { logger } from "../utils/logger";
 import { Stream, StreamStore } from "./streamStore";
 
 /**
@@ -42,7 +43,10 @@ export class FileStreamStore implements StreamStore {
         );
       }
     } catch (err) {
-      console.error(`Failed to load stream store from ${this.filePath}:`, err);
+      logger.error("Failed to load stream store", {
+        filePath: this.filePath,
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

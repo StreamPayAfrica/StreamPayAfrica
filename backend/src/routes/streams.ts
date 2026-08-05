@@ -7,6 +7,7 @@ import {
   getStream,
   listStreams,
 } from "../services/streamService";
+import { statusCodeFor } from "../utils/errors";
 
 const router = Router();
 
@@ -16,8 +17,12 @@ router.post("/", (req: Request, res: Response) => {
   if (!senderPublicKey || !recipientPublicKey || !ratePerInterval || !intervalMs) {
     return res.status(400).json({ error: "senderPublicKey, recipientPublicKey, ratePerInterval, intervalMs required" });
   }
-  const stream = createStream(senderPublicKey, recipientPublicKey, String(ratePerInterval), Number(intervalMs));
-  res.status(201).json(stream);
+  try {
+    const stream = createStream(senderPublicKey, recipientPublicKey, String(ratePerInterval), Number(intervalMs));
+    res.status(201).json(stream);
+  } catch (err: any) {
+    res.status(statusCodeFor(err)).json({ error: err.message });
+  }
 });
 
 // GET /api/streams - list all streams (optionally filter by ?publicKey=)
@@ -41,7 +46,7 @@ router.post("/:id/start", async (req: Request, res: Response) => {
     const stream = await startStream(req.params.id, senderSecretKey);
     res.json(stream);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    res.status(statusCodeFor(err)).json({ error: err.message });
   }
 });
 
@@ -50,7 +55,7 @@ router.post("/:id/pause", (req: Request, res: Response) => {
   try {
     res.json(pauseStream(req.params.id));
   } catch (err: any) {
-    res.status(404).json({ error: err.message });
+    res.status(statusCodeFor(err)).json({ error: err.message });
   }
 });
 
@@ -59,7 +64,7 @@ router.post("/:id/stop", (req: Request, res: Response) => {
   try {
     res.json(stopStream(req.params.id));
   } catch (err: any) {
-    res.status(404).json({ error: err.message });
+    res.status(statusCodeFor(err)).json({ error: err.message });
   }
 });
 

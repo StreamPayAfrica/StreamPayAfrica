@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createWallet, fundWallet, getBalance } from "../services/walletService";
+import { statusCodeFor } from "../utils/errors";
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.post("/fund", async (req: Request, res: Response) => {
     await fundWallet(publicKey);
     res.json({ message: "Wallet funded successfully", publicKey });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(statusCodeFor(err)).json({ error: err.message });
   }
 });
 
@@ -27,7 +28,7 @@ router.get("/:publicKey/balance", async (req: Request, res: Response) => {
     const balance = await getBalance(req.params.publicKey);
     res.json({ publicKey: req.params.publicKey, balance, asset: "XLM" });
   } catch (err: any) {
-    res.status(404).json({ error: err.message });
+    res.status(statusCodeFor(err)).json({ error: err.message });
   }
 });
 

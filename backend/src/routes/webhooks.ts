@@ -1,17 +1,26 @@
 import { Router, Request, Response } from "express";
-import { server } from "../services/walletService";
+import { NetworkError } from "@stellar/stellar-sdk";
+import { assertValidPublicKey, server } from "../services/walletService";
+import { NotFoundError, statusCodeFor } from "../utils/errors";
 
 const router = Router();
 
-// GET /api/webhooks/payments/:publicKey - stream recent payments for an account
+// GET /api/webhooks/payments/:publicKey - recent payments for an account
 router.get("/payments/:publicKey", async (req: Request, res: Response) => {
   try {
+    assertValidPublicKey(req.params.publicKey);
     const payments = await server
       .payments()
       .forAccount(req.params.publicKey)
       .limit(10)
       .order("desc")
-      .call();
+      .call()
+      .catch((err: unknown) => {
+        if (err instanceof NetworkError && err.response?.status === 404) {
+          throw new NotFoundError(`Account not found: ${req.params.publicKey}`);
+        }
+        throw err;
+      });
 
     const records = payments.records.map((p: any) => ({
       id: p.id,
@@ -25,7 +34,7 @@ router.get("/payments/:publicKey", async (req: Request, res: Response) => {
 
     res.json({ publicKey: req.params.publicKey, payments: records });
   } catch (err: any) {
-    res.status(404).json({ error: err.message });
+    res.status(statusCodeFor(err)).json({ error: err.message });
   }
 });
 

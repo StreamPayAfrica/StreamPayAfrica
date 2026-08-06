@@ -99,12 +99,22 @@ export async function startStream(streamId: string, senderSecretKey: string): Pr
     } catch (err) {
       logger.error("Stream payment failed", {
         streamId,
-        message: err instanceof Error ? err.message : String(err),
+        error: err instanceof Error ? err.message : String(err),
       });
       stream.status = "paused";
       clearTimer(streamId);
     } finally {
-      store.set(stream);
+      // tick() runs unawaited on the setInterval path, so a throw here (e.g. a
+      // FileStreamStore disk write failure) would otherwise become an unhandled
+      // promise rejection and crash the whole process, killing every stream.
+      try {
+        store.set(stream);
+      } catch (err) {
+        logger.error("Failed to persist stream state", {
+          streamId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
       ticking.delete(streamId);
     }
   };

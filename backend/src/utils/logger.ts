@@ -9,7 +9,9 @@ function resolveLevel(): LogLevel {
 
 function log(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
   if (LEVELS[level] < LEVELS[resolveLevel()]) return;
-  const line = JSON.stringify({ timestamp: new Date().toISOString(), level, message, ...meta });
+  // meta is spread before message so a meta key named "message" can't silently
+  // shadow the message this call site actually meant to log.
+  const line = JSON.stringify({ timestamp: new Date().toISOString(), level, ...meta, message });
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);
   else console.log(line);

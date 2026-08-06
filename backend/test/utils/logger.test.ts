@@ -33,6 +33,28 @@ describe("logger", () => {
     });
   });
 
+  it("keeps the message argument even when meta has its own 'message' key", () => {
+    delete process.env.LOG_LEVEL;
+    const spy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    logger.error("Stream payment failed", { streamId: "abc", message: "network timeout" });
+
+    const parsed = JSON.parse(spy.mock.calls[0][0] as string);
+    expect(parsed.message).toBe("Stream payment failed");
+    expect(parsed.streamId).toBe("abc");
+  });
+
+  it("still reports the underlying error text under a distinct 'error' key", () => {
+    delete process.env.LOG_LEVEL;
+    const spy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    logger.error("Stream payment failed", { streamId: "abc", error: "network timeout" });
+
+    const parsed = JSON.parse(spy.mock.calls[0][0] as string);
+    expect(parsed.message).toBe("Stream payment failed");
+    expect(parsed.error).toBe("network timeout");
+  });
+
   it("suppresses levels below the configured LOG_LEVEL", () => {
     process.env.LOG_LEVEL = "warn";
     const spy = jest.spyOn(console, "log").mockImplementation(() => undefined);

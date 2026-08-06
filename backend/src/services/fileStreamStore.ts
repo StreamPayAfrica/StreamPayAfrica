@@ -45,7 +45,7 @@ export class FileStreamStore implements StreamStore {
     } catch (err) {
       logger.error("Failed to load stream store", {
         filePath: this.filePath,
-        message: err instanceof Error ? err.message : String(err),
+        error: err instanceof Error ? err.message : String(err),
       });
     }
   }

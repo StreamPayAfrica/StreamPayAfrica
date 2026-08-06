@@ -62,7 +62,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   if (err.type === "entity.too.large") {
     return res.status(413).json({ error: "Request body too large" });
   }
-  logger.error("Unhandled error", { message: err?.message, stack: err?.stack });
+  logger.error("Unhandled error", { error: err?.message, stack: err?.stack });
   res.status(statusCodeFor(err)).json({ error: err.message || "Internal server error" });
 });
 

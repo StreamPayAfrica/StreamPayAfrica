@@ -1,10 +1,24 @@
 import { Horizon, Keypair, NetworkError, Networks, StrKey } from "@stellar/stellar-sdk";
 import { NotFoundError, ValidationError } from "../utils/errors";
 
-const HORIZON_URL = process.env.HORIZON_URL || "https://horizon-testnet.stellar.org";
-export const NETWORK_PASSPHRASE =
-  process.env.NETWORK === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
 const IS_MAINNET = process.env.NETWORK === "mainnet";
+export const NETWORK_PASSPHRASE = IS_MAINNET ? Networks.PUBLIC : Networks.TESTNET;
+
+/**
+ * Defaults HORIZON_URL to the Horizon instance matching NETWORK, so setting
+ * NETWORK=mainnet without also overriding HORIZON_URL can't leave the server
+ * signing with the mainnet passphrase while submitting to testnet Horizon
+ * (or vice versa) — a mismatch that fails signature verification on every
+ * transaction.
+ */
+export function resolveHorizonUrl(): string {
+  if (process.env.HORIZON_URL) return process.env.HORIZON_URL;
+  return process.env.NETWORK === "mainnet"
+    ? "https://horizon.stellar.org"
+    : "https://horizon-testnet.stellar.org";
+}
+
+const HORIZON_URL = resolveHorizonUrl();
 
 export const server = new Horizon.Server(HORIZON_URL);
 

@@ -3,6 +3,34 @@ import * as walletService from "../../src/services/walletService";
 import { NotFoundError, ValidationError } from "../../src/utils/errors";
 
 describe("walletService", () => {
+  describe("resolveHorizonUrl", () => {
+    const originalNetwork = process.env.NETWORK;
+    const originalHorizonUrl = process.env.HORIZON_URL;
+
+    afterEach(() => {
+      process.env.NETWORK = originalNetwork;
+      process.env.HORIZON_URL = originalHorizonUrl;
+    });
+
+    it("defaults to testnet Horizon when NETWORK is unset", () => {
+      delete process.env.NETWORK;
+      delete process.env.HORIZON_URL;
+      expect(walletService.resolveHorizonUrl()).toBe("https://horizon-testnet.stellar.org");
+    });
+
+    it("defaults to mainnet Horizon when NETWORK=mainnet, without needing HORIZON_URL", () => {
+      process.env.NETWORK = "mainnet";
+      delete process.env.HORIZON_URL;
+      expect(walletService.resolveHorizonUrl()).toBe("https://horizon.stellar.org");
+    });
+
+    it("prefers an explicit HORIZON_URL over the NETWORK default", () => {
+      process.env.NETWORK = "mainnet";
+      process.env.HORIZON_URL = "https://custom-horizon.example.com";
+      expect(walletService.resolveHorizonUrl()).toBe("https://custom-horizon.example.com");
+    });
+  });
+
   describe("createWallet", () => {
     it("returns a valid Stellar keypair", () => {
       const wallet = walletService.createWallet();

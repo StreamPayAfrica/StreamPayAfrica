@@ -22,6 +22,9 @@ const HORIZON_URL = resolveHorizonUrl();
 
 export const server = new Horizon.Server(HORIZON_URL);
 
+/** Friendbot has no SLA; cap how long a stalled request can tie up a wallet/fund call. */
+const FRIENDBOT_TIMEOUT_MS = 10_000;
+
 export interface WalletInfo {
   publicKey: string;
   secretKey: string;
@@ -54,7 +57,9 @@ export async function fundWallet(publicKey: string): Promise<void> {
   if (IS_MAINNET) {
     throw new ValidationError("Friendbot funding is only available on testnet");
   }
-  const res = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`);
+  const res = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`, {
+    signal: AbortSignal.timeout(FRIENDBOT_TIMEOUT_MS),
+  });
   if (!res.ok) {
     const body = await res.text();
     throw new Error(`Friendbot failed: ${body}`);

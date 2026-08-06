@@ -84,7 +84,27 @@ describe("walletService", () => {
       const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({ ok: true } as Response);
 
       await expect(walletService.fundWallet(publicKey)).resolves.toBeUndefined();
-      expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining(encodeURIComponent(publicKey)));
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining(encodeURIComponent(publicKey)),
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      );
+    });
+
+    it("gives up instead of hanging forever when Friendbot stalls", async () => {
+      const { publicKey } = walletService.createWallet();
+      const controller = new AbortController();
+      jest.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+      jest.spyOn(global, "fetch").mockImplementation((_url, init) => {
+        const signal = (init as RequestInit).signal;
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(new Error("The operation was aborted")));
+        });
+      });
+
+      const pending = walletService.fundWallet(publicKey);
+      controller.abort();
+
+      await expect(pending).rejects.toThrow();
     });
 
     it("throws when Friendbot responds with an error", async () => {

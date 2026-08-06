@@ -137,8 +137,17 @@
     msg('apiBaseResult', `Using API at ${API}`);
   }
 
+  // Several values rendered below (API error messages, Horizon payment fields)
+  // originate from user input or a third-party service, so escape anything
+  // interpolated into innerHTML rather than trusting its format.
+  function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
+  }
+
   function msg(id, text, ok = true) {
-    document.getElementById(id).innerHTML = `<div class="msg ${ok ? 'ok' : 'err'}">${text}</div>`;
+    document.getElementById(id).innerHTML = `<div class="msg ${ok ? 'ok' : 'err'}">${esc(text)}</div>`;
   }
 
   async function api(method, path, body) {
@@ -164,8 +173,8 @@
     if (data.error) return msg('walletResult', data.error, false);
     document.getElementById('walletResult').innerHTML = `
       <div class="msg ok">
-        <strong>Public Key:</strong><br><span class="mono">${data.publicKey}</span><br><br>
-        <strong>Secret Key (save this!):</strong><br><span class="mono">${data.secretKey}</span>
+        <strong>Public Key:</strong><br><span class="mono">${esc(data.publicKey)}</span><br><br>
+        <strong>Secret Key (save this!):</strong><br><span class="mono">${esc(data.secretKey)}</span>
       </div>`;
   }
 
@@ -174,7 +183,7 @@
     if (!key) return msg('balanceResult', 'Enter a public key', false);
     const data = await api('GET', `/wallet/${key}/balance`);
     if (data.error) return msg('balanceResult', data.error, false);
-    document.getElementById('balanceResult').innerHTML = `<div class="msg ok"><div class="balance-display">${data.balance} XLM</div></div>`;
+    document.getElementById('balanceResult').innerHTML = `<div class="msg ok"><div class="balance-display">${esc(data.balance)} XLM</div></div>`;
   }
 
   async function fundWallet() {
@@ -195,7 +204,7 @@
     };
     const data = await api('POST', '/streams', body);
     if (data.error) return msg('createResult', data.error, false);
-    document.getElementById('createResult').innerHTML = `<div class="msg ok">Stream created! ID: <span class="mono">${data.id}</span></div>`;
+    document.getElementById('createResult').innerHTML = `<div class="msg ok">Stream created! ID: <span class="mono">${esc(data.id)}</span></div>`;
   }
 
   async function startStream() {
@@ -223,15 +232,15 @@
     }
     const rows = data.map(s => `
       <tr>
-        <td class="mono">${s.id.slice(0,8)}…</td>
-        <td class="mono">${s.recipientPublicKey.slice(0,12)}…</td>
-        <td>${s.ratePerInterval} XLM / ${s.intervalMs}ms</td>
-        <td>${s.totalSent} XLM</td>
-        <td><span class="badge ${s.status}">${s.status}</span></td>
+        <td class="mono">${esc(s.id.slice(0,8))}…</td>
+        <td class="mono">${esc(s.recipientPublicKey.slice(0,12))}…</td>
+        <td>${esc(s.ratePerInterval)} XLM / ${esc(s.intervalMs)}ms</td>
+        <td>${esc(s.totalSent)} XLM</td>
+        <td><span class="badge ${esc(s.status)}">${esc(s.status)}</span></td>
         <td class="actions">
-          ${s.status !== 'active' && s.status !== 'stopped' ? `<button onclick="controlStream('${s.id}','start')" style="font-size:0.75rem;padding:0.25rem 0.6rem">▶</button>` : ''}
-          ${s.status === 'active' ? `<button class="warn" onclick="controlStream('${s.id}','pause')" style="font-size:0.75rem;padding:0.25rem 0.6rem">⏸</button>` : ''}
-          ${s.status !== 'stopped' ? `<button class="danger" onclick="controlStream('${s.id}','stop')" style="font-size:0.75rem;padding:0.25rem 0.6rem">■</button>` : ''}
+          ${s.status !== 'active' && s.status !== 'stopped' ? `<button onclick="controlStream('${esc(s.id)}','start')" style="font-size:0.75rem;padding:0.25rem 0.6rem">▶</button>` : ''}
+          ${s.status === 'active' ? `<button class="warn" onclick="controlStream('${esc(s.id)}','pause')" style="font-size:0.75rem;padding:0.25rem 0.6rem">⏸</button>` : ''}
+          ${s.status !== 'stopped' ? `<button class="danger" onclick="controlStream('${esc(s.id)}','stop')" style="font-size:0.75rem;padding:0.25rem 0.6rem">■</button>` : ''}
         </td>
       </tr>`).join('');
     document.getElementById('streamsTable').innerHTML = `
@@ -246,7 +255,7 @@
     if (!key) return;
     const data = await api('GET', `/webhooks/payments/${key}`);
     if (data.error) {
-      document.getElementById('paymentsTable').innerHTML = `<div class="msg err">${data.error}</div>`;
+      document.getElementById('paymentsTable').innerHTML = `<div class="msg err">${esc(data.error)}</div>`;
       return;
     }
     if (!data.payments.length) {
@@ -255,11 +264,11 @@
     }
     const rows = data.payments.map(p => `
       <tr>
-        <td>${p.type}</td>
-        <td>${p.amount} ${p.asset}</td>
-        <td class="mono">${(p.from || '').slice(0,12)}…</td>
-        <td class="mono">${(p.to || '').slice(0,12)}…</td>
-        <td style="color:#64748b">${new Date(p.createdAt).toLocaleString()}</td>
+        <td>${esc(p.type)}</td>
+        <td>${esc(p.amount)} ${esc(p.asset)}</td>
+        <td class="mono">${esc((p.from || '').slice(0,12))}…</td>
+        <td class="mono">${esc((p.to || '').slice(0,12))}…</td>
+        <td style="color:#64748b">${esc(new Date(p.createdAt).toLocaleString())}</td>
       </tr>`).join('');
     document.getElementById('paymentsTable').innerHTML = `
       <table style="margin-top:0.75rem">

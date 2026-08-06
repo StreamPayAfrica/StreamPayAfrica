@@ -155,8 +155,9 @@ Base URL: `http://localhost:3000/api`
 ```
 
 Validation: `senderPublicKey`/`recipientPublicKey` must be valid Stellar public keys and must differ,
-`ratePerInterval` must be a positive number, and `intervalMs` must be an integer of at least 1000
-(1 second). `POST /streams/:id/start` also verifies that `senderSecretKey` decodes to the stream's
+`ratePerInterval` must be a positive plain-decimal number with at most 7 decimal places (Stellar's
+precision limit), and `intervalMs` must be an integer of at least 1000 (1 second).
+`POST /streams/:id/start` also verifies that `senderSecretKey` decodes to the stream's
 `senderPublicKey` before starting.
 
 **POST /streams/:id/start** — body:
@@ -240,7 +241,7 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | `PORT` | `3000` | API server port |
 | `LOG_LEVEL` | `info` | Minimum level logged: `debug`, `info`, `warn`, or `error` |
 | `NETWORK` | `testnet` | `testnet` or `mainnet` |
-| `HORIZON_URL` | Testnet Horizon | Custom Horizon endpoint |
+| `HORIZON_URL` | Horizon matching `NETWORK` | Custom Horizon endpoint; overrides the per-network default |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin(s); a single origin or a comma-separated list, set to your frontend's origin(s) in production |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window, in milliseconds |
 | `RATE_LIMIT_MAX` | `60` | Max requests per IP per window across all `/api` routes |
@@ -312,6 +313,11 @@ Already handled:
   as `paused` since secret keys are never stored, so they must be explicitly restarted
 - **Containerized deployment** — a multi-stage `Dockerfile` and `docker-compose.yml` for running the
   backend with a persistent volume (see [Running with Docker](#running-with-docker))
+- **Crash-resilient stream ticking** — a persistence failure on a scheduled stream payment (e.g. a
+  disk write error under `STREAM_STORE=file`) is caught and logged instead of becoming an unhandled
+  promise rejection that would otherwise take down the whole process
+- **Dependency security gate** — CI runs `npm audit --audit-level=high` so a dependency with a known
+  high/critical vulnerability fails the build
 
 Still open — these are demo simplifications that need real infrastructure before production use:
 
@@ -320,7 +326,8 @@ Still open — these are demo simplifications that need real infrastructure befo
   Redis-backed implementation
 - **Secret key handling** — never send secret keys over the wire in production; use a signing service or hardware wallet
 - **HTTPS** — terminate TLS at a reverse proxy (nginx, Caddy) in front of the Node server
-- **Mainnet** — set `NETWORK=mainnet` and update `HORIZON_URL` to `https://horizon.stellar.org`
+- **Mainnet** — set `NETWORK=mainnet`; `HORIZON_URL` defaults to `https://horizon.stellar.org`
+  automatically unless overridden
 
 ---
 

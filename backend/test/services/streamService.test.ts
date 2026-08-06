@@ -51,6 +51,23 @@ describe("streamService", () => {
       ).toThrow(/positive number/);
     });
 
+    it("rejects a rate with more than 7 decimal places", () => {
+      expect(() =>
+        createStream(sender.publicKey, recipient.publicKey, "0.123456789", 5000)
+      ).toThrow(/decimal places/);
+    });
+
+    it("accepts a rate with exactly 7 decimal places", () => {
+      const stream = createStream(sender.publicKey, recipient.publicKey, "0.1234567", 5000);
+      expect(stream.ratePerInterval).toBe("0.1234567");
+    });
+
+    it("rejects scientific notation", () => {
+      expect(() => createStream(sender.publicKey, recipient.publicKey, "1e5", 5000)).toThrow(
+        /positive number/
+      );
+    });
+
     it("rejects an interval below the minimum", () => {
       expect(() => createStream(sender.publicKey, recipient.publicKey, "0.1", 999)).toThrow(
         /intervalMs/

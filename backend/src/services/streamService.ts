@@ -16,6 +16,9 @@ export type { Stream, StreamStatus } from "./streamStore";
 /** Minimum interval to avoid hammering Horizon / burning fees on tiny streams. */
 const MIN_INTERVAL_MS = 1000;
 
+/** Stellar amounts must be a positive decimal with at most 7 digits after the point. */
+const RATE_PATTERN = /^\d+(\.\d{1,7})?$/;
+
 function createStore(): StreamStore {
   if (process.env.STREAM_STORE === "file") {
     return new FileStreamStore(process.env.STREAM_STORE_PATH || "./data/streams.json");
@@ -39,6 +42,11 @@ export function createStream(
     throw new ValidationError("senderPublicKey and recipientPublicKey must differ");
   }
 
+  if (!RATE_PATTERN.test(ratePerInterval)) {
+    throw new ValidationError(
+      "ratePerInterval must be a positive number with at most 7 decimal places"
+    );
+  }
   const rate = Number(ratePerInterval);
   if (!Number.isFinite(rate) || rate <= 0) {
     throw new ValidationError("ratePerInterval must be a positive number");

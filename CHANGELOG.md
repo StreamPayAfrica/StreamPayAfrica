@@ -3,6 +3,18 @@
 Notable changes to StreamPay Africa. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] - 2026-08-14
+
+### Added
+
+- `TRUST_PROXY` environment variable so Express reads the real client IP from `X-Forwarded-For`
+  when deployed behind a reverse proxy (nginx, Caddy, a load balancer). Previously `trust proxy`
+  was never set, so behind any reverse proxy every request appeared to come from the proxy's own
+  address, collapsing the per-IP rate limiter into one shared limit for all clients.
+- `uncaughtException`/`unhandledRejection` process-level handlers that log through the structured
+  logger before exiting, so an unexpected crash is captured by log aggregation instead of only
+  ever appearing as a bare stack trace on stderr.
+
 ## [Unreleased] - 2026-08-06
 
 ### Fixed

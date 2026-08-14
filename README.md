@@ -243,6 +243,7 @@ curl -X POST http://localhost:3000/api/streams/<STREAM_ID>/stop
 | `NETWORK` | `testnet` | `testnet` or `mainnet` |
 | `HORIZON_URL` | Horizon matching `NETWORK` | Custom Horizon endpoint; overrides the per-network default |
 | `CORS_ORIGIN` | `*` | Allowed CORS origin(s); a single origin or a comma-separated list, set to your frontend's origin(s) in production |
+| `TRUST_PROXY` | disabled | Trust `X-Forwarded-For` from a reverse proxy in front of the server; `true`, a hop count (e.g. `1`), or any other value Express's `trust proxy` setting accepts. Leave unset with no reverse proxy — see [Running behind a reverse proxy](#running-behind-a-reverse-proxy) |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limit window, in milliseconds |
 | `RATE_LIMIT_MAX` | `60` | Max requests per IP per window across all `/api` routes |
 | `STREAM_STORE` | `memory` | `memory` (lost on restart) or `file` (persisted as JSON on disk) |
@@ -262,6 +263,17 @@ only production dependencies + compiled output), runs it on `http://localhost:30
 stream data in a named volume via `STREAM_STORE=file`. Override any environment variable in
 `docker-compose.yml` (e.g. `NETWORK`, `CORS_ORIGIN`) to point at a different Stellar network or
 frontend origin.
+
+---
+
+## Running behind a reverse proxy
+
+If you terminate TLS with nginx, Caddy, or a cloud load balancer in front of the Node server (see
+[HTTPS](#production-considerations)), set `TRUST_PROXY` so Express reads the real client IP from
+`X-Forwarded-For` instead of the proxy's own address. Without it, the per-IP rate limiter (and any
+IP-based logging) sees every request as coming from the proxy, collapsing the limit meant for each
+client into one shared limit for everyone behind it. Set it to the number of proxy hops between the
+client and this server — usually `1` for a single reverse proxy.
 
 ---
 
@@ -318,6 +330,12 @@ Already handled:
   promise rejection that would otherwise take down the whole process
 - **Dependency security gate** — CI runs `npm audit --audit-level=high` so a dependency with a known
   high/critical vulnerability fails the build
+- **Accurate client IPs behind a proxy** — `TRUST_PROXY` opts into reading `X-Forwarded-For` so
+  rate limiting works correctly when deployed behind nginx/Caddy/a load balancer (see
+  [Running behind a reverse proxy](#running-behind-a-reverse-proxy))
+- **Crash safety net** — `uncaughtException`/`unhandledRejection` handlers log the error through the
+  structured logger before exiting, instead of a bare stack trace on stderr that log aggregation may
+  never capture
 
 Still open — these are demo simplifications that need real infrastructure before production use:
 

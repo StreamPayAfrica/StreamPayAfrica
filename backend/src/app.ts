@@ -19,12 +19,31 @@ export function resolveCorsOrigin(): string | string[] {
   return origins.length <= 1 ? (origins[0] ?? "*") : origins;
 }
 
+/**
+ * Express's default (trust proxy disabled) reads the client IP from the raw
+ * socket, which behind a reverse proxy (see the Docker/nginx deployment in
+ * the README) is always the proxy's own address — collapsing the per-IP rate
+ * limiter into one shared limit for every real client. TRUST_PROXY lets a
+ * deployment opt into reading X-Forwarded-For, either for a specific number
+ * of trusted hops (an integer) or via any value Express's "trust proxy"
+ * setting accepts (e.g. an IP/CIDR). Left unset, it stays disabled — safe
+ * for the common case of running with no reverse proxy in front.
+ */
+export function resolveTrustProxy(): boolean | number | string {
+  const raw = process.env.TRUST_PROXY;
+  if (!raw) return false;
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+  return /^-?\d+$/.test(raw) ? Number(raw) : raw;
+}
+
 const CORS_ORIGIN = resolveCorsOrigin();
 const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000;
 const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 60;
 
 const app = express();
 
+app.set("trust proxy", resolveTrustProxy());
 app.use(helmet());
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "10kb" }));

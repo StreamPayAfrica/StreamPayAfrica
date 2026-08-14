@@ -1,5 +1,5 @@
 import request from "supertest";
-import app, { resolveCorsOrigin } from "../src/app";
+import app, { resolveCorsOrigin, resolveTrustProxy } from "../src/app";
 
 describe("resolveCorsOrigin", () => {
   const original = process.env.CORS_ORIGIN;
@@ -21,6 +21,36 @@ describe("resolveCorsOrigin", () => {
   it("splits a comma-separated list into an array", () => {
     process.env.CORS_ORIGIN = "https://a.example.com, https://b.example.com";
     expect(resolveCorsOrigin()).toEqual(["https://a.example.com", "https://b.example.com"]);
+  });
+});
+
+describe("resolveTrustProxy", () => {
+  const original = process.env.TRUST_PROXY;
+
+  afterEach(() => {
+    process.env.TRUST_PROXY = original;
+  });
+
+  it("defaults to false when unset", () => {
+    delete process.env.TRUST_PROXY;
+    expect(resolveTrustProxy()).toBe(false);
+  });
+
+  it("parses 'true' and 'false' as booleans", () => {
+    process.env.TRUST_PROXY = "true";
+    expect(resolveTrustProxy()).toBe(true);
+    process.env.TRUST_PROXY = "false";
+    expect(resolveTrustProxy()).toBe(false);
+  });
+
+  it("parses an integer hop count as a number", () => {
+    process.env.TRUST_PROXY = "1";
+    expect(resolveTrustProxy()).toBe(1);
+  });
+
+  it("passes through other values (e.g. an IP or CIDR) as-is", () => {
+    process.env.TRUST_PROXY = "loopback";
+    expect(resolveTrustProxy()).toBe("loopback");
   });
 });
 

@@ -30,3 +30,19 @@ function shutdown(signal: string) {
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+// Last-resort safety net: log what would otherwise be a silent crash (or a
+// bare stack trace on stderr) through the structured logger before exiting,
+// so production log aggregation actually captures the cause.
+process.on("uncaughtException", (err) => {
+  logger.error("Uncaught exception, shutting down", { error: err.message, stack: err.stack });
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled promise rejection, shutting down", {
+    error: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+  });
+  process.exit(1);
+});
